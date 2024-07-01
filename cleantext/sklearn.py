@@ -6,6 +6,7 @@ from typing import Any, List, Union
 
 import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin
+from tqdm import tqdm
 
 from .clean import clean
 
@@ -75,17 +76,12 @@ class CleanTransformer(TransformerMixin, BaseEstimator):
         return self
 
     def transform(self, X: Union[List[str], pd.Series]) -> Union[List[str], pd.Series]:
-        """
-        Normalize various aspects of each item in raw text array-like.
-        Args:
-            X (array-like): an array-like of strings. It could be a list or a Pandas Series.
-        Returns:
-            array-like[str]: an array-like with the same type as ``X``
-                             and with the processed items of ``X`` as content.
-        """
+        # Ensure the input is list or pd.Series, otherwise raise an error.
         if not (isinstance(X, list) or isinstance(X, pd.Series)):
             raise ValueError("The input must be a list or pd.Series")
+        # Process pandas Series with tqdm in the apply function.
         if isinstance(X, pd.Series):
-            return X.apply(lambda text: clean(text, **self.get_params()))
+            return X.apply(lambda text: clean(text, **self.get_params())).pipe(tqdm, total=X.shape[0], desc="Cleaning Text")
+        # Process lists with tqdm directly wrapping the map function.
         else:
-            return list(map(lambda text: clean(text, **self.get_params()), X))
+            return list(tqdm(map(lambda text: clean(text, **self.get_params()), X), total=len(X), desc="Cleaning Text"))
